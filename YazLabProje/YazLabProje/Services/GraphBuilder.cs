@@ -41,8 +41,9 @@ public static class GraphBuilder
                 {
                     From = byId[u],
                     To = byId[v],
-                    Weight = 1.0
+                    Weight = WeightCalculator.Calculate(byId[u], byId[v])
                 });
+
             }
         }
 

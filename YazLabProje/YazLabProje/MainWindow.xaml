@@ -15,6 +15,7 @@
         <!-- TOP BAR -->
         <Border Grid.Row="0" CornerRadius="10" Padding="10" Background="#1A1A1A" Margin="0,0,0,10">
             <DockPanel LastChildFill="False">
+
                 <!-- Left: CSV -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                     <TextBlock Text="CSV:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -28,7 +29,10 @@
                 <!-- Right: Algo -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                     <TextBlock Text="Algoritma:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox x:Name="AlgoCombo" Width="170" SelectedIndex="0">
+
+                    <!-- ✅ SelectionChanged eklendi -->
+                    <ComboBox x:Name="AlgoCombo" Width="170" SelectedIndex="0"
+                              SelectionChanged="AlgoCombo_SelectionChanged">
                         <ComboBoxItem Content="Dijkstra"/>
                         <ComboBoxItem Content="A*"/>
                         <ComboBoxItem Content="BFS"/>
@@ -36,11 +40,11 @@
                         <ComboBoxItem Content="Bağlı Bileşenler"/>
                         <ComboBoxItem Content="Degree Centrality"/>
                         <ComboBoxItem Content="Welsh-Powell"/>
-
                     </ComboBox>
-                   
+
                     <Button x:Name="BtnRun" Content="Çalıştır" Width="110" Margin="10,0,0,0" Click="BtnRun_Click"/>
                 </StackPanel>
+
             </DockPanel>
         </Border>
 
@@ -54,7 +58,15 @@
             <!-- Canvas area -->
             <Border Grid.Column="0" CornerRadius="10" Padding="10" Background="#1A1A1A">
                 <Grid>
-                    <Canvas x:Name="GraphCanvas" Background="#0F0F0F"/>
+                    <!-- ✅ ScrollViewer + Loaded/SizeChanged + MinWidth/MinHeight eklendi -->
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <Canvas x:Name="GraphCanvas"
+                                Background="#0F0F0F"
+                                MinWidth="900" MinHeight="600"
+                                Loaded="GraphCanvas_Loaded"
+                                SizeChanged="GraphCanvas_SizeChanged"/>
+                    </ScrollViewer>
+
                     <TextBlock Text="Canvas: Grafik burada çizilecek"
                                Foreground="#777" Margin="8"
                                IsHitTestVisible="False"/>
@@ -67,13 +79,30 @@
                     <TextBlock Text="Kontroller" Foreground="White" FontSize="16" FontWeight="Bold" Margin="0,0,0,12"/>
 
                     <TextBlock Text="Başlangıç Node ID" Foreground="White"/>
-                    <TextBox x:Name="TxtStart" Margin="0,6,0,10"/>
+                    <!-- ✅ read-only -->
+                    <TextBox x:Name="TxtStart" Margin="0,6,0,10" IsReadOnly="True"/>
 
                     <TextBlock Text="Hedef Node ID" Foreground="White"/>
-                    <TextBox x:Name="TxtEnd" Margin="0,6,0,10"/>
+                    <!-- ✅ read-only -->
+                    <TextBox x:Name="TxtEnd" Margin="0,6,0,10" IsReadOnly="True"/>
 
-                    <CheckBox x:Name="ChkShowIds" Content="Node ID göster" Foreground="White" IsChecked="True" Margin="0,0,0,6"/>
-                    <CheckBox x:Name="ChkShowWeights" Content="Ağırlıkları göster" Foreground="White" IsChecked="True" Margin="0,0,0,12"/>
+                    <!-- ✅ Checked/Unchecked eklendi -->
+                    <CheckBox x:Name="ChkShowIds"
+                              Content="Node ID göster"
+                              Foreground="White"
+                              IsChecked="True"
+                              Margin="0,0,0,6"
+                              Checked="UiOptionChanged"
+                              Unchecked="UiOptionChanged"/>
+
+                    <!-- ✅ Checked/Unchecked eklendi -->
+                    <CheckBox x:Name="ChkShowWeights"
+                              Content="Ağırlıkları göster"
+                              Foreground="White"
+                              IsChecked="True"
+                              Margin="0,0,0,12"
+                              Checked="UiOptionChanged"
+                              Unchecked="UiOptionChanged"/>
 
                     <Button x:Name="BtnClear" Content="Temizle" Height="34" Click="BtnClear_Click"/>
                 </StackPanel>

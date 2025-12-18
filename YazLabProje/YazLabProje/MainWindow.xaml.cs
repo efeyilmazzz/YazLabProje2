@@ -29,10 +29,15 @@ namespace projedeneme
             InitializeComponent();
             Log("UI hazır. CSV seçip 'Yükle'ye bas.");
 
-            // (Bozmaz) Start/End elle yazılmasın istiyorsan XAML'de IsReadOnly=True yap.
-            // Burada da güvence:
+            // Start/End elle yazılmasın (UI seçimi node tıklama ile)
             if (TxtStart != null) TxtStart.IsReadOnly = true;
             if (TxtEnd != null) TxtEnd.IsReadOnly = true;
+
+            // Algo değişince start/end aktifliklerini ayarla
+            if (AlgoCombo != null)
+                AlgoCombo.SelectionChanged += AlgoCombo_SelectionChanged;
+
+            ApplyAlgoUiState();
         }
 
         private void BtnLoad_Click(object sender, RoutedEventArgs e)
@@ -69,21 +74,37 @@ namespace projedeneme
                 return;
             }
 
-            var algo = (AlgoCombo.SelectedItem as ComboBoxItem)?.Content?.ToString();
+            var algo = (AlgoCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "";
             Log($"[UI] Algo: {algo}, Start={TxtStart.Text}, End={TxtEnd.Text}");
-
-            int startId;
-            if (!int.TryParse(TxtStart.Text, out startId))
-            {
-                Log("[HATA] Start seç (node'a tıkla).");
-                return;
-            }
 
             try
             {
-                // Algoritmaları sen ekleyeceksin.
-                // Burada sadece seçimlere göre iskelet var; bilinmeyen seçimlerde hata fırlatmak yerine log + return yaptım.
+                // Algoya göre input ihtiyacı
+                bool needsStart = AlgoNeedsStart(algo);
+                bool needsEnd = AlgoNeedsEnd(algo);
 
+                int startId = -1;
+                int endId = -1;
+
+                if (needsStart)
+                {
+                    if (!int.TryParse(TxtStart.Text, out startId))
+                    {
+                        Log("[HATA] Start seç (node'a tıkla).");
+                        return;
+                    }
+                }
+
+                if (needsEnd)
+                {
+                    if (!int.TryParse(TxtEnd.Text, out endId))
+                    {
+                        Log("[HATA] End seç (node'a tıkla).");
+                        return;
+                    }
+                }
+
+                // Mevcut bağlı olanlar
                 if (algo == "BFS")
                 {
                     var order = Bfs.Run(_graph, startId);
@@ -100,29 +121,18 @@ namespace projedeneme
                     return;
                 }
 
-                // Yeni eklemek istediğin 3 algoritma (sen kodunu ekleyeceksin)
-                if (algo == "Bağlı Bileşenler")
-                {
-                    Log("[BİLGİ] Bağlı Bileşenler seçildi. (Kodunu sen ekleyeceksin)");
-                    return;
-                }
-
-                if (algo == "Degree Centrality")
-                {
-                    Log("[BİLGİ] Degree Centrality seçildi. (Kodunu sen ekleyeceksin)");
-                    return;
-                }
-
-                if (algo == "Welsh-Powell")
-                {
-                    Log("[BİLGİ] Welsh-Powell seçildi. (Kodunu sen ekleyeceksin)");
-                    return;
-                }
-
-                // Mevcut XAML'inde olan ama henüz bağlanmamış görünenler:
+                // Diğerleri: sen bağlayacaksın (UI inputları hazır)
                 if (algo == "Dijkstra" || algo == "A*")
                 {
-                    Log("[BİLGİ] Bu algoritma UI'da var ama henüz kodu bağlanmadı. (Sen ekleyeceksin)");
+                    Log("[BİLGİ] Bu algoritma seçildi. Start/End hazır. (Kodu sen bağlayacaksın)");
+                    // Buraya kendi Dijkstra/A* çağrını ekleyeceksin.
+                    return;
+                }
+
+                if (algo == "Bağlı Bileşenler" || algo == "Degree Centrality" || algo == "Welsh-Powell")
+                {
+                    Log("[BİLGİ] Bu algoritma seçildi. Start/End gerekmiyor. (Kodu sen bağlayacaksın)");
+                    // Buraya kendi algoritma çağrılarını ekleyeceksin.
                     return;
                 }
 
@@ -136,18 +146,94 @@ namespace projedeneme
 
         private void BtnClear_Click(object sender, RoutedEventArgs e)
         {
-            GraphCanvas.Children.Clear();
-
-            nodeEllipses.Clear();
-            edgeLines.Clear();
-
+            // Grafik yüklü değilse sadece alanları temizle
             selectedStartId = null;
             selectedEndId = null;
             nextClickIsStart = true;
 
-            _graph = null;
+            if (TxtStart != null) TxtStart.Text = "";
+            if (TxtEnd != null) TxtEnd.Text = "";
 
-            Log("[UI] Canvas temizlendi.");
+            // Edge highlight'larını geri al (grafik yüklüyse)
+            foreach (var kvp in edgeLines)
+            {
+                kvp.Value.Stroke = Brushes.DimGray;
+                kvp.Value.StrokeThickness = 2;
+            }
+
+            // Node renklerini geri al (grafik yüklüyse)
+            UpdateNodeColors();
+
+            Log("[UI] Seçimler temizlendi (grafik/CSV korunuyor).");
+        }
+
+
+        // --- Algo UI state (Start/End enable/disable) ---
+
+        // XAML istersen: AlgoCombo SelectionChanged="AlgoCombo_SelectionChanged"
+        private void AlgoCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplyAlgoUiState();
+        }
+
+        private void ApplyAlgoUiState()
+        {
+            var algo = (AlgoCombo?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "";
+
+            bool startEnabled = AlgoNeedsStart(algo);
+            bool endEnabled = AlgoNeedsEnd(algo);
+
+            if (TxtStart != null) TxtStart.IsEnabled = startEnabled;
+            if (TxtEnd != null) TxtEnd.IsEnabled = endEnabled;
+
+            // Start/End gerekmiyorsa temizle + seçimi de temizle ki renkler düzgün kalsın
+            if (!startEnabled)
+            {
+                selectedStartId = null;
+                if (TxtStart != null) TxtStart.Text = "";
+            }
+
+            if (!endEnabled)
+            {
+                selectedEndId = null;
+                if (TxtEnd != null) TxtEnd.Text = "";
+            }
+
+            // Tıklama sırasını da mantıklı ayarla:
+            // Start aktifse ilk tık start'tan başlasın. Start pasifse zaten node tıklamak anlamsız.
+            nextClickIsStart = startEnabled;
+
+            UpdateNodeColors();
+        }
+
+        private bool AlgoNeedsStart(string algo)
+        {
+            // BFS/DFS: sadece start
+            if (algo == "BFS" || algo == "DFS") return true;
+
+            // Dijkstra/A*: start + end
+            if (algo == "Dijkstra" || algo == "A*") return true;
+
+            // Bağlı bileşenler / degree / welsh-powell: input yok
+            if (algo == "Bağlı Bileşenler" || algo == "Degree Centrality" || algo == "Welsh-Powell") return false;
+
+            // Varsayılan: start gereksin
+            return true;
+        }
+
+        private bool AlgoNeedsEnd(string algo)
+        {
+            // Dijkstra/A* end ister
+            if (algo == "Dijkstra" || algo == "A*") return true;
+
+            // BFS/DFS end istemez
+            if (algo == "BFS" || algo == "DFS") return false;
+
+            // Bağlı bileşenler / degree / welsh-powell: end yok
+            if (algo == "Bağlı Bileşenler" || algo == "Degree Centrality" || algo == "Welsh-Powell") return false;
+
+            // Varsayılan: end istemesin
+            return false;
         }
 
         // --- UI Geliştirmeleri: Canvas resize / loaded / checkbox change ---
@@ -155,7 +241,6 @@ namespace projedeneme
         // XAML: GraphCanvas Loaded="GraphCanvas_Loaded"
         private void GraphCanvas_Loaded(object sender, RoutedEventArgs e)
         {
-            // Canvas ilk açılışta ölçüler 0 gelebiliyor; loaded sonrası bir redraw düzgün oturtur.
             if (_graph != null)
                 DrawGraphFromGraph(_graph);
         }
@@ -163,7 +248,6 @@ namespace projedeneme
         // XAML: GraphCanvas SizeChanged="GraphCanvas_SizeChanged"
         private void GraphCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            // Resize sırasında sürekli redraw ağır olabilir; ama proje küçük/orta graf için OK.
             if (_graph != null)
                 DrawGraphFromGraph(_graph);
         }
@@ -185,7 +269,9 @@ namespace projedeneme
 
             selectedStartId = null;
             selectedEndId = null;
-            nextClickIsStart = true;
+
+            // Seçili algo'ya göre başlangıç tıklama mantığını yeniden kur
+            ApplyAlgoUiState();
 
             // Daha sağlam ölçü okuma (ActualWidth/Height bazen 0 geliyor)
             double W = GraphCanvas.ActualWidth;
@@ -193,7 +279,6 @@ namespace projedeneme
 
             if (W < 50 || H < 50)
             {
-                // ScrollViewer veya ilk render durumlarında
                 W = GraphCanvas.MinWidth > 0 ? GraphCanvas.MinWidth : 800;
                 H = GraphCanvas.MinHeight > 0 ? GraphCanvas.MinHeight : 450;
             }
@@ -308,6 +393,26 @@ namespace projedeneme
             int id;
             if (el.Tag == null || !int.TryParse(el.Tag.ToString(), out id)) return;
 
+            var algo = (AlgoCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "";
+            bool startEnabled = AlgoNeedsStart(algo);
+            bool endEnabled = AlgoNeedsEnd(algo);
+
+            // Start/End tamamen pasifse node tıklamayı görmezden gel
+            if (!startEnabled && !endEnabled)
+                return;
+
+            // BFS/DFS: sadece start
+            if (startEnabled && !endEnabled)
+            {
+                selectedStartId = id;
+                TxtStart.Text = id.ToString();
+                Log($"[UI] Start seçildi: {id}");
+                nextClickIsStart = true; // hep start seçsin
+                UpdateNodeColors();
+                return;
+            }
+
+            // Dijkstra/A*: start ve end var -> sıralı seçim
             if (nextClickIsStart)
             {
                 selectedStartId = id;
