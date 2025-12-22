@@ -14,6 +14,7 @@ namespace projedeneme
 {
     public partial class MainWindow : Window
     {
+
         private bool nextClickIsStart = true;
 
         private readonly Dictionary<int, Ellipse> nodeEllipses = new Dictionary<int, Ellipse>();
@@ -21,9 +22,10 @@ namespace projedeneme
 
         // ✅ A* heuristic için canvas pozisyonlarını saklayacağız
         private readonly Dictionary<int, (double x, double y)> nodePositions = new Dictionary<int, (double x, double y)>();
-
+        private Dictionary<int, int> nodeColoring = null;
         private int? selectedStartId = null;
         private int? selectedEndId = null;
+        
 
         private Graph _graph = null; // nullable kapalı uyum
 
@@ -163,12 +165,55 @@ namespace projedeneme
                     return;
                 }
 
-                // Diğerleri (sonra bağlayacağız)
-                if (algo == "Bağlı Bileşenler" || algo == "Degree Centrality" || algo == "Welsh-Powell")
+                if (algo == "Bağlı Bileşenler")
                 {
-                    Log("[BİLGİ] Bu algoritma seçildi. Start/End gerekmiyor. (Kodu sonra bağlayacağız)");
+                    HighlightPath(Array.Empty<int>());
+
+                    var comps = ConnectedComponents.Run(_graph);
+                    Log($"[OK] Bağlı Bileşen Sayısı: {comps.Count}");
+
+                    for (int i = 0; i < comps.Count; i++)
+                        Log($"  Bileşen {i + 1} ({comps[i].Count} node): {string.Join(", ", comps[i])}");
+
+                    // bileşenleri renklendir
+                    nodeColoring = new Dictionary<int, int>();
+                    for (int i = 0; i < comps.Count; i++)
+                        foreach (var id in comps[i])
+                            nodeColoring[id] = i;
+
+                    UpdateNodeColors();
                     return;
                 }
+
+                if (algo == "Degree Centrality")
+                {
+                    HighlightPath(Array.Empty<int>());
+                    nodeColoring = null;
+                    UpdateNodeColors();
+
+                    var top = DegreeCentrality.TopK(_graph, 5);
+                    Log("[OK] Top 5 Degree Centrality:");
+                    for (int i = 0; i < top.Count; i++)
+                        Log($"  {i + 1}) Node {top[i].NodeId} -> Degree {top[i].Degree}");
+
+                    return;
+                }
+
+                if (algo == "Welsh-Powell")
+                {
+                    HighlightPath(Array.Empty<int>());
+
+                    var coloring = WelshPowell.Color(_graph);
+                    nodeColoring = coloring;
+                    UpdateNodeColors();
+
+                    int colorCount = coloring.Values.DefaultIfEmpty(-1).Max() + 1;
+                    Log($"[OK] Welsh-Powell: Kullanılan renk sayısı = {colorCount}");
+
+                   
+                    return;
+                }
+
 
                 Log("[HATA] Seçilen algoritma tanınmadı.");
             }
@@ -442,14 +487,41 @@ namespace projedeneme
                 int id = kvp.Key;
                 Ellipse el = kvp.Value;
 
+                // default renk
+                Brush baseBrush = Brushes.Orange;
+
+                // Welsh-Powell / Bileşen boyama varsa uygula
+                if (nodeColoring != null && nodeColoring.TryGetValue(id, out int cidx))
+                    baseBrush = GetBrushForColorIndex(cidx);
+
+                // Start/End her zaman override etsin
                 if (selectedStartId.HasValue && id == selectedStartId.Value)
                     el.Fill = Brushes.LimeGreen;
                 else if (selectedEndId.HasValue && id == selectedEndId.Value)
                     el.Fill = Brushes.Red;
                 else
-                    el.Fill = Brushes.Orange;
+                    el.Fill = baseBrush;
             }
         }
+        private Brush GetBrushForColorIndex(int c)
+        {
+            Brush[] palette =
+            {
+        Brushes.Orange,
+        Brushes.DeepSkyBlue,
+        Brushes.Violet,
+        Brushes.YellowGreen,
+        Brushes.Gold,
+        Brushes.Tomato,
+        Brushes.MediumSpringGreen,
+        Brushes.Cyan
+    };
+
+            if (c < 0) c = 0;
+            return palette[c % palette.Length];
+        }
+
+
 
         private void HighlightPath(int[] pathNodeIds)
         {
