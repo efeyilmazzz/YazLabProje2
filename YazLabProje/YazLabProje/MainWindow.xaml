@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Graph Visualizer" Height="720" Width="1200"
         WindowStartupLocation="CenterScreen"
-        Background="#111111">
+        Background="#111111"
+        Loaded="Window_Loaded">
 
     <Grid Margin="12">
         <Grid.RowDefinitions>
@@ -29,10 +30,7 @@
                 <!-- Right: Algo -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                     <TextBlock Text="Algoritma:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-
-                    <!-- ✅ SelectionChanged eklendi -->
-                    <ComboBox x:Name="AlgoCombo" Width="170" SelectedIndex="0"
-                              SelectionChanged="AlgoCombo_SelectionChanged">
+                    <ComboBox x:Name="AlgoCombo" Width="170" SelectedIndex="0">
                         <ComboBoxItem Content="Dijkstra"/>
                         <ComboBoxItem Content="A*"/>
                         <ComboBoxItem Content="BFS"/>
@@ -58,7 +56,6 @@
             <!-- Canvas area -->
             <Border Grid.Column="0" CornerRadius="10" Padding="10" Background="#1A1A1A">
                 <Grid>
-                    <!-- ✅ ScrollViewer + Loaded/SizeChanged + MinWidth/MinHeight eklendi -->
                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                         <Canvas x:Name="GraphCanvas"
                                 Background="#0F0F0F"
@@ -75,37 +72,137 @@
 
             <!-- Right panel -->
             <Border Grid.Column="1" CornerRadius="10" Padding="12" Background="#1A1A1A" Margin="10,0,0,0">
-                <StackPanel>
-                    <TextBlock Text="Kontroller" Foreground="White" FontSize="16" FontWeight="Bold" Margin="0,0,0,12"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
 
-                    <TextBlock Text="Başlangıç Node ID" Foreground="White"/>
-                    <!-- ✅ read-only -->
-                    <TextBox x:Name="TxtStart" Margin="0,6,0,10" IsReadOnly="True"/>
+                        <TextBlock Text="Kontroller" Foreground="White" FontSize="16" FontWeight="Bold" Margin="0,0,0,12"/>
 
-                    <TextBlock Text="Hedef Node ID" Foreground="White"/>
-                    <!-- ✅ read-only -->
-                    <TextBox x:Name="TxtEnd" Margin="0,6,0,10" IsReadOnly="True"/>
+                        <!-- Seçim -->
+                        <GroupBox Header="Seçim" Foreground="White" Margin="0,0,0,10">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="Başlangıç Node ID" Foreground="White"/>
+                                <TextBox x:Name="TxtStart"
+                                         Margin="0,6,0,10"
+                                         IsReadOnly="False"
+                                         LostFocus="TxtStart_LostFocus"/>
 
-                    <!-- ✅ Checked/Unchecked eklendi -->
-                    <CheckBox x:Name="ChkShowIds"
-                              Content="Node ID göster"
-                              Foreground="White"
-                              IsChecked="True"
-                              Margin="0,0,0,6"
-                              Checked="UiOptionChanged"
-                              Unchecked="UiOptionChanged"/>
+                                <TextBlock Text="Hedef Node ID" Foreground="White"/>
+                                <TextBox x:Name="TxtEnd"
+                                         Margin="0,6,0,0"
+                                         IsReadOnly="False"
+                                         LostFocus="TxtEnd_LostFocus"/>
+                            </StackPanel>
+                        </GroupBox>
 
-                    <!-- ✅ Checked/Unchecked eklendi -->
-                    <CheckBox x:Name="ChkShowWeights"
-                              Content="Ağırlıkları göster"
-                              Foreground="White"
-                              IsChecked="True"
-                              Margin="0,0,0,12"
-                              Checked="UiOptionChanged"
-                              Unchecked="UiOptionChanged"/>
+                        <!-- Node Detay -->
+                        <GroupBox Header="Node Özellikleri" Foreground="White" Margin="0,0,0,10">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="Seçili Node:" Foreground="White"/>
+                                <TextBlock x:Name="TxtNodeInfoId" Text="-" Foreground="White" FontWeight="Bold" Margin="0,2,0,8"/>
 
-                    <Button x:Name="BtnClear" Content="Temizle" Height="34" Click="BtnClear_Click"/>
-                </StackPanel>
+                                <TextBlock Text="Degree:" Foreground="White"/>
+                                <TextBlock x:Name="TxtNodeInfoDegree" Text="-" Foreground="White" Margin="0,2,0,8"/>
+
+                                <TextBlock Text="Komşular:" Foreground="White"/>
+                                <TextBox x:Name="TxtNodeInfoNeighbors"
+                                         Text="-" Height="70" TextWrapping="Wrap"
+                                         IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Node Yönetimi -->
+                        <GroupBox Header="Node Yönetimi" Foreground="White" Margin="0,0,0,10">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="Node ID" Foreground="White"/>
+                                <TextBox x:Name="TxtEditNodeId" Margin="0,6,0,10" />
+
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="BtnAddNode" Content="Node Ekle" Width="120" Height="32"
+                                            Click="BtnAddNode_Click"/>
+                                    <Button x:Name="BtnRemoveNode" Content="Node Sil" Width="120" Height="32"
+                                            Margin="10,0,0,0" Click="BtnRemoveNode_Click"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Not: Aynı ID tekrar eklenemez." Foreground="#888" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Edge Yönetimi -->
+                        <GroupBox Header="Edge Yönetimi" Foreground="White" Margin="0,0,0,10">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="From ID" Foreground="White"/>
+                                <TextBox x:Name="TxtEdgeFrom" Margin="0,6,0,8"/>
+
+                                <TextBlock Text="To ID" Foreground="White"/>
+                                <TextBox x:Name="TxtEdgeTo" Margin="0,6,0,8"/>
+
+                                <TextBlock Text="Weight (opsiyonel)" Foreground="White"/>
+                                <TextBox x:Name="TxtEdgeWeight" Margin="0,6,0,10" Text="1"/>
+
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="BtnAddEdge" Content="Edge Ekle" Width="120" Height="32"
+                                            Click="BtnAddEdge_Click"/>
+                                    <Button x:Name="BtnRemoveEdge" Content="Edge Sil" Width="120" Height="32"
+                                            Margin="10,0,0,0" Click="BtnRemoveEdge_Click"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Not: Self-loop yok. Aynı edge tekrar eklenemez." Foreground="#888" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Güncelleme -->
+                        <GroupBox Header="Güncelleme" Foreground="White" Margin="0,0,0,10">
+                            <StackPanel Margin="10">
+
+                                <TextBlock Text="Node ID Güncelle (Rename)" Foreground="White" FontWeight="Bold" Margin="0,0,0,6"/>
+                                <TextBlock Text="Eski Node ID" Foreground="White"/>
+                                <TextBox x:Name="TxtUpdateOldNodeId" Margin="0,6,0,8"/>
+                                <TextBlock Text="Yeni Node ID" Foreground="White"/>
+                                <TextBox x:Name="TxtUpdateNewNodeId" Margin="0,6,0,10"/>
+                                <Button x:Name="BtnUpdateNode" Content="Node Güncelle" Height="32"
+                                        Click="BtnUpdateNode_Click"/>
+
+                                <Separator Margin="0,12,0,12"/>
+
+                                <TextBlock Text="Edge Weight Güncelle" Foreground="White" FontWeight="Bold" Margin="0,0,0,6"/>
+                                <TextBlock Text="From ID" Foreground="White"/>
+                                <TextBox x:Name="TxtUpdateEdgeFrom" Margin="0,6,0,8"/>
+                                <TextBlock Text="To ID" Foreground="White"/>
+                                <TextBox x:Name="TxtUpdateEdgeTo" Margin="0,6,0,8"/>
+                                <TextBlock Text="Yeni Weight" Foreground="White"/>
+                                <TextBox x:Name="TxtUpdateEdgeWeight" Margin="0,6,0,10" Text="1"/>
+                                <Button x:Name="BtnUpdateEdge" Content="Edge Güncelle" Height="32"
+                                        Click="BtnUpdateEdge_Click"/>
+
+                                <TextBlock Text="Not: Edge güncelleme sadece weight değiştirir." Foreground="#888" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Görünüm -->
+                        <GroupBox Header="Görünüm" Foreground="White" Margin="0,0,0,10">
+                            <StackPanel Margin="10">
+                                <CheckBox x:Name="ChkShowIds"
+                                          Content="Node ID göster"
+                                          Foreground="White"
+                                          IsChecked="True"
+                                          Margin="0,0,0,6"
+                                          Checked="UiOptionChanged"
+                                          Unchecked="UiOptionChanged"/>
+
+                                <CheckBox x:Name="ChkShowWeights"
+                                          Content="Ağırlıkları göster"
+                                          Foreground="White"
+                                          IsChecked="True"
+                                          Margin="0,0,0,0"
+                                          Checked="UiOptionChanged"
+                                          Unchecked="UiOptionChanged"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <Button x:Name="BtnClear" Content="Temizle" Height="34" Click="BtnClear_Click"/>
+
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
 
