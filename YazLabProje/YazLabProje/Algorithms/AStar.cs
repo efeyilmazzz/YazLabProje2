@@ -7,11 +7,7 @@ namespace projedeneme.Algorithms
 {
     public static class AStar
     {
-        /// <summary>
-        /// Weighted A* shortest path.
-        /// Uses graph.Edges Weight values (WeightCalculator output).
-        /// Returns node id path including start & goal. Empty if not found.
-        /// </summary>
+        
         public static List<int> FindPath(Graph graph, int startId, int goalId, Func<int, int, double> heuristic)
         {
             if (graph == null) return new List<int>();
