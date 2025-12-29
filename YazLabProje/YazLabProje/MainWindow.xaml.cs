@@ -5,7 +5,11 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Diagnostics;
+
 using System.Windows.Shapes;
+
+
 
 using projedeneme.Models;
 using projedeneme.Services;
@@ -165,27 +169,33 @@ namespace projedeneme
 
                 if (algo == "BFS")
                 {
+                    var sw = Stopwatch.StartNew();
                     var order = Bfs.Run(_graph, startId);
-                    Log($"Sonuç: BFS | Ziyaret: {order.Count}");
+                    sw.Stop();
 
+                    Log($"Sonuç: BFS | Ziyaret: {order.Count} | Süre: {sw.Elapsed.TotalMilliseconds:F3} ms");
                     HighlightPath(order.ToArray());
                     return;
                 }
 
                 if (algo == "DFS")
                 {
+                    var sw = Stopwatch.StartNew();
                     var order = Dfs.Run(_graph, startId);
-                    Log($"Sonuç: DFS | Ziyaret: {order.Count}");
+                    sw.Stop();
 
+                    Log($"Sonuç: DFS | Ziyaret: {order.Count} | Süre: {sw.Elapsed.TotalMilliseconds:F3} ms");
                     HighlightPath(order.ToArray());
                     return;
                 }
 
                 if (algo == "Dijkstra")
                 {
+                    var sw = Stopwatch.StartNew();
                     var (path, cost) = Dijkstra.Run(_graph, startId, endId);
-                    Log($"Sonuç: Dijkstra | Yol uzunluğu: {path.Count} | Maliyet: {cost:0.####}");
+                    sw.Stop();
 
+                    Log($"Sonuç: Dijkstra | Yol uzunluğu: {path.Count} | Maliyet: {cost:0.####} | Süre: {sw.Elapsed.TotalMilliseconds:F3} ms");
                     HighlightPath(path.ToArray());
                     return;
                 }
@@ -203,16 +213,18 @@ namespace projedeneme
                         return 0.0;
                     }
 
+                    var sw = Stopwatch.StartNew();
                     var path = AStar.FindPath(_graph, startId, endId, Heuristic);
+                    sw.Stop();
+
                     if (path == null || path.Count == 0)
                     {
-                        Log($"Sonuç: A* | Yol uzunluğu: {path.Count}");
-
+                        Log($"Sonuç: A* | Yol bulunamadı | Süre: {sw.Elapsed.TotalMilliseconds:F3} ms");
                         HighlightPath(Array.Empty<int>());
                         return;
                     }
 
-                    Log($"A*: {string.Join("->", path)}");
+                    Log($"Sonuç: A* | Yol uzunluğu: {path.Count} | Süre: {sw.Elapsed.TotalMilliseconds:F3} ms");
                     HighlightPath(path.ToArray());
                     return;
                 }
@@ -221,8 +233,11 @@ namespace projedeneme
                 {
                     HighlightPath(Array.Empty<int>());
 
+                    var sw = Stopwatch.StartNew();
                     var comps = ConnectedComponents.Run(_graph);
-                    Log($"Bağlı Bileşen: {comps.Count}");
+                    sw.Stop();
+
+                    Log($"Bağlı Bileşen: {comps.Count} | Süre: {sw.Elapsed.TotalMilliseconds:F3} ms");
 
                     nodeColoring = new Dictionary<int, int>();
                     for (int i = 0; i < comps.Count; i++)
@@ -239,10 +254,14 @@ namespace projedeneme
                     nodeColoring = null;
                     UpdateNodeColors();
 
+                    var sw = Stopwatch.StartNew();
                     var top = DegreeCentrality.TopK(_graph, 5);
-                    Log("Top 5 Degree:");
+                    sw.Stop();
+
+                    Log($"Top 5 Degree | Süre: {sw.Elapsed.TotalMilliseconds:F3} ms");
                     for (int i = 0; i < top.Count; i++)
                         Log($"{i + 1}) Node {top[i].NodeId} -> Degree {top[i].Degree}");
+
                     return;
                 }
 
@@ -250,14 +269,18 @@ namespace projedeneme
                 {
                     HighlightPath(Array.Empty<int>());
 
+                    var sw = Stopwatch.StartNew();
                     var coloring = WelshPowell.Color(_graph);
+                    sw.Stop();
+
                     nodeColoring = coloring;
                     UpdateNodeColors();
 
                     int colorCount = coloring.Values.DefaultIfEmpty(-1).Max() + 1;
-                    Log($"Welsh-Powell renk sayısı: {colorCount}");
+                    Log($"Welsh-Powell renk sayısı: {colorCount} | Süre: {sw.Elapsed.TotalMilliseconds:F3} ms");
                     return;
                 }
+
 
                 Log("Algoritma tanınmadı.");
             }
